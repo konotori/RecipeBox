@@ -1,175 +1,58 @@
-# iOSAppTemplate
+# Recipe Box
 
-**A production-ready iOS app template — Clean Architecture, SwiftUI, multi-environment, and a complete linting/formatting/scaffolding toolchain.**
+A SwiftUI recipe browser powered by **[TheMealDB](https://www.themealdb.com)** — and a complete, runnable reference app built with the [**iOSAppTemplate**](https://github.com/konotori/iOSAppTemplate) Clean Architecture template (scaffolded via `make new-app`).
 
-![Swift 6](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
-![Platforms](https://img.shields.io/badge/Platforms-iOS%2016%2B-blue?logo=apple)
-![Xcode 16+](https://img.shields.io/badge/Xcode-16%2B-147EFB?logo=xcode&logoColor=white)
-![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey)
+![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white) ![iOS](https://img.shields.io/badge/iOS-18%2B-blue) ![Tests](https://img.shields.io/badge/tests-33%20passing-brightgreen) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-Clone it, run **two commands**, and start building — every new app starts from the same opinionated, consistent foundation.
+## Features
 
-```bash
-bash scripts/bootstrap.sh          # install tools (Mint, SwiftLint, SwiftFormat, pre-commit)
-# edit .env → NEW_PROJECT_NAME / NEW_BUNDLE_ID
-make new-app                       # rename the whole project + verify it builds
-```
+- **Discover** — a random "Meal of the Day" plus the full category grid.
+- **Cuisines** — browse by cuisine (curated to the areas that actually have recipes), drill into the meals.
+- **Search** — debounced search by name (`.searchable` + `.task(id:)`).
+- **Meal detail** — hero image (tap to zoom full-screen), an interactive ingredient checklist, numbered instructions, YouTube / source links, and a favourite toggle with haptics.
+- **Favourites** — saved locally with **SwiftData**, reactive list, swipe to remove.
+- **English + Vietnamese** via a String Catalog.
 
-## Table of Contents
+## What it demonstrates
 
-- [What's Inside](#whats-inside)
-- [Requirements](#requirements)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [Bundled Packages](#bundled-packages)
-- [Tooling](#tooling)
-- [`make` Command Reference](#make-command-reference)
-- [Documentation](#documentation)
-- [License](#license)
-
-## What's Inside
-
-| Area | What you get |
-|---|---|
-| **Architecture** | Clean Architecture (App · Domain · Data · Presentation · Foundation) with a strict one-way dependency rule |
-| **UI** | SwiftUI, `NavigationStack`-based navigation, ready-made folders for Screens / Components / Sheets / Covers / Popups / Theme |
-| **Environments** | Dev · Staging · Prod — separate `.xcconfig` files **and** schemes |
-| **Networking** | [RESTKit](https://github.com/konotori/RESTKit) — compile-time-typed, `Sendable` REST client |
-| **Navigation** | [NaviStack](https://github.com/konotori/NaviStack) — type-safe, interceptable SwiftUI router |
-| **Logging** | [LogPipe](https://github.com/konotori/LogPipe) — structured, multi-destination logging pipeline |
-| **Code quality** | SwiftLint + SwiftFormat, version-pinned via **Mint**, wired into pre-commit, an Xcode build phase, and `make` |
-| **Compile health** | `-warn-long-function-bodies` / `-warn-long-expression-type-checking` flags surface slow-to-compile code (Dev only) |
-| **Scaffolding** | `make new-app` renames the entire project (folders, target, schemes, bundle IDs, `@main` struct) from one config file |
-| **Testing** | Unit test target ready to extend |
+- **Clean Architecture** with a strict one-way dependency rule —
+  `Presentation → Domain ← Data`, shared helpers in `Foundation`, wired in `App/AppContainer`:
+  - **Domain** — `Meal`/`MealCategory`/`Area` models, repository protocols, 8 use cases (no framework imports).
+  - **Data** — TheMealDB DTOs, RESTKit endpoints, mappers, a repository that maps `APIError` → domain `MealError`, and a SwiftData-backed `FavoritesStore`.
+  - **Presentation** — SwiftUI screens with `@Observable` view models, a `Loadable` state enum, design tokens, and a Liquid-Glass card modifier.
+- **Bundled packages**: [RESTKit](https://github.com/konotori/RESTKit) (compile-time-typed networking), [NaviStack](https://github.com/konotori/NaviStack) (per-tab type-safe router + an analytics interceptor), [LogPipe](https://github.com/konotori/LogPipe) (structured logging).
+- **Modern Apple APIs**: SwiftData, the Observation framework, `NavigationStack`, the iOS 18 `Tab` API, `.sensoryFeedback`, `ContentUnavailableView`, `MagnifyGesture`, and **Liquid Glass** (iOS 26) with a material fallback gated by `#available`.
+- **Multi-environment** (Dev / Staging / Prod) selected at compile time via `SWIFT_ACTIVE_COMPILATION_CONDITIONS` → `AppEnvironment`.
+- **33 Swift Testing** unit tests (mappers, use cases, repository error/`null` handling, favourites, environment, extensions).
 
 ## Requirements
 
-| | Minimum |
-|---|---|
-| iOS | 16.0 (uses SwiftUI `NavigationStack`) |
-| Swift | 6.0 |
-| Xcode | 16.0 (filesystem-synchronized groups + native `.editorconfig` support) |
-| Tooling | [Homebrew](https://brew.sh) (bootstrap installs the rest) |
+- **Xcode 26+** (the app conditionally adopts the iOS 26 Liquid Glass APIs, so it needs the iOS 26 SDK to compile).
+- Deployment target **iOS 18**.
 
-## Getting Started
-
-### 1. Install the toolchain (once per machine)
+## Getting started
 
 ```bash
-bash scripts/bootstrap.sh
+bash scripts/bootstrap.sh      # Mint + pinned SwiftLint/SwiftFormat + pre-commit
+open RecipeBox.xcodeproj
 ```
 
-Installs [Mint](https://github.com/yonaskolb/Mint), the pinned SwiftLint/SwiftFormat versions (from `Mintfile`), and `pre-commit` (and installs the git hook).
+Pick a scheme — **RecipeBox-Dev** / **-Staging** / **-Prod** — and run. Dev/Staging show an environment badge and verbose logging; Prod is clean. TheMealDB's public test API key (`1`) is used, so there's nothing to configure.
 
-### 2. Create your app
+## Day-to-day
 
-Edit **`.env`**:
-
-```bash
-NEW_PROJECT_NAME=MyApp                 # hyphen-free (becomes Swift type names)
-NEW_BUNDLE_ID=com.yourcompany.myapp
-```
-
-Then:
-
-```bash
-make new-app
-```
-
-This renames the source folder, `.xcodeproj`, schemes, target, module, `@main` struct, and bundle IDs, then **builds the result to verify nothing was missed**. Open `MyApp.xcodeproj` from the new folder and run.
-
-> ⚠️ Use a **hyphen-free** name. A hyphen becomes an underscore in Swift type names (e.g. `my-app` → `my_appApp`) and trips the SwiftLint `type_name` rule.
-
-### 3. Add the SwiftLint build phase (one-time, in Xcode)
-
-For in-editor, click-to-navigate lint warnings on the files you change:
-
-1. Target → **Build Phases** → **+** → **New Run Script Phase** → name it `SwiftLint (incremental)`.
-2. Script: `bash "${SRCROOT}/scripts/run-swiftlint-incremental.sh"`
-3. Uncheck **"Based on dependency analysis"**.
-
-(`ENABLE_USER_SCRIPT_SANDBOXING` is already set to `NO` so the script can run `git`/`mint`.)
-
-## Project Structure
-
-```
-MyApp/
-├── App/                 # Composition root: @main entry, AppDelegate, DI container (AppContainer)
-├── Config/              # Per-environment .xcconfig (Dev / Staging / Prod)
-├── Domain/              # Pure business logic — no framework dependencies
-│   ├── Models/
-│   ├── UseCases/
-│   └── RepositoryProtocols/
-├── Data/                # Implementations of the Domain protocols
-│   ├── Network/         #   DTOs, API services (built on RESTKit)
-│   ├── Database/
-│   ├── Repositories/
-│   └── Mappers/         #   DTO ↔ Domain model
-├── Presentation/        # SwiftUI UI layer
-│   ├── Screens/         #   Flow-level screens
-│   ├── UIComponents/    #   Reusable, app-agnostic components
-│   └── Views/ Theme/ Modifiers/ Navigation/ Sheets/ Covers/ Popups/ Alerts/ Extensions/
-├── Foundation/          # Shared, app-wide helpers
-│   ├── Extensions/      #   Swift/SwiftUI/Foundation extensions
-│   └── Helpers/         #   Stateless utilities
-└── Resources/           # Assets, fonts, localizable strings, media
-```
-
-**Dependency rule (one-way):** `Presentation → Domain ← Data`. The `App` layer is the only place that wires everything together. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md).
-
-> Empty skeleton folders keep a `README.md` (excluded from the build target) so the structure is preserved in git and visible in Xcode. Replace them with real files as you go.
-
-## Bundled Packages
-
-The template depends on three focused, zero-dependency Swift packages (resolved via SPM):
-
-| Package | Role |
+| When | Command |
 |---|---|
-| **[RESTKit](https://github.com/konotori/RESTKit)** | Networking — an endpoint declares its response type, so requesting the wrong type is a *compile* error, not a runtime surprise. Fully `Sendable`. |
-| **[NaviStack](https://github.com/konotori/NaviStack)** | Navigation — centralized, type-safe SwiftUI router with a two-phase interceptor pipeline (auth guards, analytics, locks). |
-| **[LogPipe](https://github.com/konotori/LogPipe)** | Logging — one API for every layer, structured events, per-destination levels, redaction, crash-reporter facade. |
+| Before committing | `make fix` (format + auto-fix lint) |
+| Full gate (what CI runs) | `make verify` |
+| Tests | `xcodebuild test -scheme RecipeBox-Dev …` |
 
-A full vertical-slice example wiring all three is in [docs/SAMPLE_FEATURE.md](docs/SAMPLE_FEATURE.md).
+CI starter: `.github/workflows/ci.yml.example` (rename to `ci.yml` to enable; pick a runner whose Xcode matches the project).
 
-## Tooling
+## Architecture & conventions
 
-Code quality is enforced by **SwiftFormat** (style, auto-fixed) and **SwiftLint** (safety/logic, blocks), version-pinned with **Mint** so every teammate and CI use identical versions. The two are deliberately separated — SwiftFormat owns style, SwiftLint owns everything else — to avoid conflicts.
+The `docs/` folder (inherited from the template) documents the architecture, folder layout, conventions, and tooling in depth — start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/TOOLING.md](docs/TOOLING.md).
 
-| Stage | What runs |
-|---|---|
-| **While coding** | Xcode build phase lints changed files → navigable warnings |
-| **On commit** | `pre-commit`: SwiftFormat auto-fixes, SwiftLint (strict) blocks, image-size guard |
-| **On demand / CI** | `make verify` |
+## Credits
 
-Full details — version bumps, the SwiftFormat/SwiftLint split, the image-size guard, `.editorconfig`, and the compile-time warning flags — are in **[docs/TOOLING.md](docs/TOOLING.md)**.
-
-## `make` Command Reference
-
-```
-make bootstrap     Install Mint + tools + pre-commit hooks
-make new-app       Scaffold a new app from .env (rename + verify build)
-make fix           Format + auto-fix lint (run before committing)
-make verify        Full read-only gate for CI (format check + strict lint)
-make lint          SwiftLint (warnings only)
-make lint-strict   SwiftLint --strict (fails on any warning)
-make format-run    SwiftFormat (format all files)
-make format-check  SwiftFormat (check only)
-make versions      Print pinned SwiftLint / SwiftFormat versions
-make help          List all commands
-```
-
-## Documentation
-
-| Doc | Contents |
-|---|---|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Clean Architecture, dependency rule, data flow, DI, modularization |
-| [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md) | What each folder is for |
-| [CONVENTIONS.md](docs/CONVENTIONS.md) | Naming, file placement, error handling |
-| [TOOLING.md](docs/TOOLING.md) | Lint/format/Mint/pre-commit/build-phase/compile-flags setup |
-| [USAGE.md](docs/USAGE.md) | Day-to-day workflow and scaffolding details |
-| [SAMPLE_FEATURE.md](docs/SAMPLE_FEATURE.md) | An end-to-end feature across all layers |
-| [CHECKLIST.md](docs/CHECKLIST.md) | Step-by-step checklist for adding a feature |
-
-## License
-
-[MIT](LICENSE) © konotori
+Recipe data from [TheMealDB](https://www.themealdb.com). Scaffolded from [iOSAppTemplate](https://github.com/konotori/iOSAppTemplate). MIT licensed.
