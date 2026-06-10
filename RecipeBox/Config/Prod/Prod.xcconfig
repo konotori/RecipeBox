@@ -1,0 +1,15 @@
+//
+//  Prod.xcconfig
+//  iOSAppTemplate
+//
+//
+
+// Configuration settings file format documentation can be found at:
+// https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
+
+// App Configuration
+BUNDLE_ID = com.konotori.recipebox.prod
+APP_NAME = RecipeBox
+
+// Selects AppEnvironment.production at compile time (see AppEnvironment.swift).
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = PROD

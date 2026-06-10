@@ -1,0 +1,15 @@
+//
+//  Stagging.xcconfig
+//  iOSAppTemplate
+//
+//
+
+// Configuration settings file format documentation can be found at:
+// https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
+
+// App Configuration
+BUNDLE_ID = com.konotori.recipebox.staging
+APP_NAME = RecipeBox-Staging
+
+// Selects AppEnvironment.staging at compile time (see AppEnvironment.swift).
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = STAGING

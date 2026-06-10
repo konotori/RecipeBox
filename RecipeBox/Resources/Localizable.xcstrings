@@ -1,0 +1,121 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "About" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giới thiệu" } }
+      }
+    },
+    "Add to favourites" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thêm vào yêu thích" } }
+      }
+    },
+    "Categories" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Danh mục" } }
+      }
+    },
+    "Cuisines" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ẩm thực" } }
+      }
+    },
+    "Discover" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Khám phá" } }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xong" } }
+      }
+    },
+    "Favourites" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Yêu thích" } }
+      }
+    },
+    "Find meals by name, e.g. \"Arrabiata\"." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tìm món theo tên, ví dụ \"Arrabiata\"." } }
+      }
+    },
+    "Ingredients" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nguyên liệu" } }
+      }
+    },
+    "Instructions" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cách làm" } }
+      }
+    },
+    "Meal of the Day" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Món ăn trong ngày" } }
+      }
+    },
+    "No Favourites Yet" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có món yêu thích" } }
+      }
+    },
+    "No Recipes" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có công thức" } }
+      }
+    },
+    "Powered by TheMealDB" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cung cấp bởi TheMealDB" } }
+      }
+    },
+    "Remove from favourites" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bỏ khỏi yêu thích" } }
+      }
+    },
+    "Search Recipes" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tìm công thức" } }
+      }
+    },
+    "Search recipes" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tìm công thức" } }
+      }
+    },
+    "Something went wrong" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã có lỗi xảy ra" } }
+      }
+    },
+    "Tap the heart on any recipe to save it here." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chạm vào trái tim ở bất kỳ công thức nào để lưu vào đây." } }
+      }
+    },
+    "There are no recipes here yet." : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có công thức nào ở đây." } }
+      }
+    },
+    "Try Again" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thử lại" } }
+      }
+    },
+    "View Original Recipe" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xem công thức gốc" } }
+      }
+    },
+    "Watch on YouTube" : {
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xem trên YouTube" } }
+      }
+    }
+  },
+  "version" : "1.1"
+}
