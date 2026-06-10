@@ -4,6 +4,15 @@ A SwiftUI recipe browser powered by **[TheMealDB](https://www.themealdb.com)** �
 
 ![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white) ![iOS](https://img.shields.io/badge/iOS-18%2B-blue) ![Tests](https://img.shields.io/badge/tests-33%20passing-brightgreen) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
+<p align="center">
+  <img src="Screenshots/discover.png" width="19%" alt="Discover" />
+  <img src="Screenshots/cuisines.png" width="19%" alt="Cuisines" />
+  <img src="Screenshots/search.png" width="19%" alt="Search" />
+  <img src="Screenshots/detail.png" width="19%" alt="Meal detail" />
+  <img src="Screenshots/favorites.png" width="19%" alt="Favourites" />
+</p>
+<p align="center"><sub><b>Discover</b> · <b>Cuisines</b> · <b>Search</b> · <b>Meal detail</b> · <b>Favourites</b></sub></p>
+
 ## Features
 
 - **Discover** — a random "Meal of the Day" plus the full category grid.
