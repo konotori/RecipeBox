@@ -92,69 +92,9 @@ jobs:
       - name: Publish test report
         if: failure()
         run: |
-          python3 - <<'EOF'
-          import json, subprocess, os, sys
-
-          XCRESULT = 'TestResults.xcresult'
-
-          def xcresulttool(*args):
-              r = subprocess.run(
-                  ['xcrun', 'xcresulttool'] + list(args) + ['--path', XCRESULT],
-                  capture_output=True, text=True)
-              if r.returncode != 0:
-                  return None, r.stderr.strip()
-              try:
-                  return json.loads(r.stdout), None
-              except Exception as e:
-                  return None, f"JSON parse error: {e}"
-
-          # --- Step 1: get test list (new API, Xcode 16+) ---
-          tests, err = xcresulttool('get', 'test-results', 'tests')
-          if not tests:
-              print(f"xcresulttool new API failed: {err}")
-              sys.exit(0)
-
-          # --- Step 2: find first failing Test Case node (any depth) and print its raw JSON ---
-          def find_first_failing(nodes):
-              for node in (nodes or []):
-                  result = (node.get('result') or '').lower()
-                  ntype  = (node.get('nodeType') or '')
-                  if result in ('failed', 'failure') and 'Test Case' in ntype:
-                      return node
-                  found = find_first_failing(node.get('children', []))
-                  if found:
-                      return found
-              return None
-
-          failing_node = find_first_failing(tests.get('testNodes', []))
-          if not failing_node:
-              print("No failing Test Case node found at all")
-              # Print a deeper sample to understand the tree
-              def show_tree(nodes, depth=0):
-                  for n in (nodes or [])[:3]:
-                      print("  "*depth + f"type={n.get('nodeType')} result={n.get('result')} name={n.get('name','?')[:40]} id={n.get('nodeIdentifier','')[:40]}")
-                      show_tree(n.get('children',[]), depth+1)
-              show_tree(tests.get('testNodes', []))
-              sys.exit(0)
-
-          node_id = failing_node.get('nodeIdentifier', '')
-          print(f"Failing node: name={failing_node.get('name')} id={node_id}")
-          print(f"Failing node raw: {json.dumps(failing_node)[:800]}")
-
-          # --- Step 3: get full test-details and print raw ---
-          details, err2 = xcresulttool('get', 'test-results', 'test-details', '--test-id', node_id)
-          if not details:
-              print(f"test-details failed: {err2}")
-              sys.exit(0)
-          print(f"test-details keys: {list(details.keys())}")
-          # Print testRuns structure
-          for i, run in enumerate(details.get('testRuns', [])[:2]):
-              print(f"testRuns[{i}] keys: {list(run.keys())}")
-              print(f"testRuns[{i}][:600]: {json.dumps(run)[:600]}")
-
-          if summary_path:
-              open(summary_path, 'a').write(''.join(md))
-          EOF
+          brew install xcresultparser
+          xcresultparser -o github -f TestResults.xcresult
+          xcresultparser -o md -f TestResults.xcresult >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save SPM cache
         if: always()
