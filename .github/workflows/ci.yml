@@ -57,7 +57,7 @@ jobs:
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,name=iPhone 16" \
-            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions --report-path . --reports junit
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions --report-path . --report junit
 
       - name: Report test results
         if: always()
