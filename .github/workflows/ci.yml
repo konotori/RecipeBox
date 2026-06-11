@@ -60,14 +60,14 @@ jobs:
         if: always()
         run: |
           gem install trainer --no-document
-          trainer --path TestResults.xcresult --output_files junit.xml
+          trainer --path TestResults.xcresult --output_directory .
 
       - name: Report test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Unit Tests
-          path: junit.xml
+          path: "*.xml"
           reporter: java-junit
           fail-on-error: false
 
