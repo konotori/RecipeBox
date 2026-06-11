@@ -47,27 +47,24 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
       - name: Test
         run: |
+          set -o pipefail
           xcodebuild test \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,name=iPhone 16" \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
-
-      - name: Convert test results to JUnit
-        if: always()
-        run: |
-          gem install trainer --no-document
-          trainer --path TestResults.xcresult --output_directory .
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions --report-path . --reports junit
 
       - name: Report test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Unit Tests
-          path: "*.xml"
+          path: report.junit
           reporter: java-junit
           fail-on-error: false
 
