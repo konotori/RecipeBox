@@ -102,9 +102,23 @@ jobs:
                       failures.extend(collect_failures(item))
               return failures
 
+          # Debug: list xcresult candidates and xcresulttool version
+          import glob
+          print("=== xcresult files ===")
+          for p in glob.glob('*.xcresult') + glob.glob('**/*.xcresult', recursive=True)[:5]:
+              print(p)
+          r_ver = subprocess.run(['xcrun', 'xcresulttool', 'version'], capture_output=True, text=True)
+          print("xcresulttool version:", r_ver.stdout.strip() or r_ver.stderr.strip())
+          r_raw = subprocess.run(
+              ['xcrun', 'xcresulttool', 'get', '--format', 'json', '--path', 'result.xcresult'],
+              capture_output=True, text=True)
+          print("exit code:", r_raw.returncode)
+          print("stderr:", r_raw.stderr[:300] if r_raw.stderr else "(none)")
+          print("stdout[:200]:", r_raw.stdout[:200] if r_raw.stdout else "(empty)")
+
           data = xcresulttool()
           if not data:
-              print("result.xcresult not found"); sys.exit(0)
+              print("xcresulttool get failed"); sys.exit(0)
 
           ref_id = None
           for action in data.get('actions', {}).get('_values', []):
