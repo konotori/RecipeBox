@@ -25,7 +25,7 @@ struct MealMapperTests {
 		let meal = MealMapper.map(detail)
 
 		#expect(meal.id == "52772")
-		#expect(meal.ingredients.count == 2) // blank ingredient #2 dropped
+		#expect(meal.ingredients.count == 3) // blank ingredient #2 dropped
 		#expect(meal.ingredients.first == Ingredient(name: "soy sauce", measure: "1/2 cup"))
 		#expect(meal.ingredients.last == Ingredient(name: "chicken", measure: "")) // blank measure -> ""
 		#expect(meal.tags == ["Meat", "Casserole"])

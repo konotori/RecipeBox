@@ -14,10 +14,10 @@ jobs:
   lint:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Cache Mint
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.mint
           key: mint-${{ runner.os }}-${{ hashFiles('Mintfile') }}
@@ -28,34 +28,63 @@ jobs:
           mint bootstrap
 
       - name: Lint + format check
-        run: make verify
+        run: make verify-github
 
-  # Job 2: build and run unit tests, upload results regardless of outcome
+  # Job 2: build and run unit tests
   test:
     runs-on: macos-15
+    timeout-minutes: 30
     env:
       PROJECT: RecipeBox.xcodeproj
       SCHEME: RecipeBox-Dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
 
+      - name: Restore SPM cache
+        id: spm-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Install xcbeautify
+        run: brew install xcbeautify
+
       - name: Test
         run: |
+          set -o pipefail
           xcodebuild test \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,name=iPhone 16" \
+            -clonedSourcePackagesDirPath SourcePackages \
             -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee xcodebuild.log | xcbeautify --renderer github-actions
 
-      - name: Upload test results
+      - name: Upload xcresult
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ github.run_id }}
+          name: TestResults
           path: TestResults.xcresult
+
+      - name: Upload xcodebuild log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
+
+      - name: Save SPM cache
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
