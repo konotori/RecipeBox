@@ -47,6 +47,21 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Cache SPM packages
+        id: spm-cache
+        uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: SPM cache status
+        run: |
+          echo "Cache hit: ${{ steps.spm-cache.outputs.cache-hit }}"
+          echo "Packages in SourcePackages:"
+          ls SourcePackages/checkouts/ 2>/dev/null || echo "(empty — will be fetched)"
+
       - name: Install xcbeautify
         run: brew install xcbeautify
 
@@ -57,6 +72,7 @@ jobs:
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,name=iPhone 16" \
+            -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions --report-path . --report junit
 
       - name: Report test results
