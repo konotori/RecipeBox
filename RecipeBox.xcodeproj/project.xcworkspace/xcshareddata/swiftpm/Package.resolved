@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/konotori/NaviStack.git",
       "state" : {
-        "revision" : "2c35bc08dab5fad6923fbd7aed89e4acd72480ba",
-        "version" : "1.0.0"
+        "revision" : "056386c03c5fbcea50584092816883b491c74c24",
+        "version" : "1.0.1"
       }
     },
     {

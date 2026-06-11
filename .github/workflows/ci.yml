@@ -28,14 +28,11 @@ jobs:
           mint bootstrap
 
       - name: Lint + format check
-        run: make verify
+        run: make verify-github
 
-  # Job 2: build and run unit tests, upload results regardless of outcome
+  # Job 2: build and run unit tests
   test:
     runs-on: macos-15
-    permissions:
-      checks: write
-      pull-requests: write
     env:
       PROJECT: RecipeBox.xcodeproj
       SCHEME: RecipeBox-Dev
@@ -72,7 +69,7 @@ jobs:
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,name=iPhone 16" \
             -clonedSourcePackagesDirPath SourcePackages \
-            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions --report-path . --report junit
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
 
       - name: Save SPM cache
         if: always()
@@ -80,13 +77,3 @@ jobs:
         with:
           path: SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-
-      - name: Report test results
-        if: always()
-        uses: dorny/test-reporter@v1
-        with:
-          name: Unit Tests
-          path: junit.xml
-          reporter: java-junit
-          fail-on-error: false
-
