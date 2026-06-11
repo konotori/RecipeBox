@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Job 1: chạy SwiftFormat + SwiftLint (không cần Xcode, nhanh hơn)
+  # Job 1: SwiftFormat + SwiftLint (no Xcode needed)
   lint:
     runs-on: macos-15
     steps:
@@ -30,7 +30,7 @@ jobs:
       - name: Lint + format check
         run: make verify
 
-  # Job 2: build và chạy unit tests, upload kết quả dù pass hay fail
+  # Job 2: build and run unit tests, upload results regardless of outcome
   test:
     runs-on: macos-15
     env:
