@@ -14,10 +14,10 @@ jobs:
   lint:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Cache Mint
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.mint
           key: mint-${{ runner.os }}-${{ hashFiles('Mintfile') }}
@@ -37,7 +37,7 @@ jobs:
       PROJECT: RecipeBox.xcodeproj
       SCHEME: RecipeBox-Dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -46,7 +46,7 @@ jobs:
 
       - name: Restore SPM cache
         id: spm-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
@@ -88,7 +88,7 @@ jobs:
 
       - name: Save SPM cache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
