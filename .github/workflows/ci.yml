@@ -74,40 +74,12 @@ jobs:
       - name: Show failure details
         if: failure()
         run: |
-          python3 - <<'EOF'
-          import os, sys
-
-          try:
-              lines = open("xcodebuild.log").readlines()
-          except FileNotFoundError:
-              print("xcodebuild.log not found")
-              sys.exit(0)
-
-          # Print 5 raw lines before and after each failing test line
-          failure_indices = [i for i, l in enumerate(lines)
-                             if "recorded an issue" in l or "#expect" in l
-                             or "Expectation failed" in l or "Issue recorded" in l
-                             or ("✗" in l and "failed" in l.lower())]
-
-          summary = os.environ.get("GITHUB_STEP_SUMMARY", "")
-          out_lines = ["## Test Failure Details\n\n```\n"]
-          seen = set()
-          for idx in failure_indices:
-              for i in range(max(0, idx - 2), min(len(lines), idx + 3)):
-                  if i not in seen:
-                      out_lines.append(lines[i])
-                      seen.add(i)
-              out_lines.append("---\n")
-
-          if len(out_lines) == 1:
-              out_lines.append("(no structured failure details found — check raw log above)\n")
-          out_lines.append("```\n")
-
-          content = "".join(out_lines)
-          print(content)
-          if summary:
-              open(summary, "a").write(content)
-          EOF
+          echo "=== xcodebuild.log line count ==="
+          wc -l xcodebuild.log || echo "file not found"
+          echo "=== lines containing 'mapsDetail' ==="
+          grep -n "mapsDetail" xcodebuild.log | head -20 || echo "(none)"
+          echo "=== last 50 lines of raw log ==="
+          tail -50 xcodebuild.log || echo "(empty)"
 
       - name: Save SPM cache
         if: always()
