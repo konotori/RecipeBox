@@ -39,19 +39,33 @@ jobs:
     env:
       PROJECT: RecipeBox.xcodeproj
       SCHEME: RecipeBox-Dev
-      DESTINATION: 'platform=iOS Simulator,name=Any iOS Simulator Device'
     steps:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
         run: sudo xcode-select -switch /Applications/Xcode_16.2.app
 
+      - name: Boot iOS Simulator
+        run: |
+          RUNTIME=$(xcrun simctl list runtimes --json | \
+            python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+rts = [r for r in data['runtimes'] if 'iOS' in r.get('name', '')]
+avail = [r for r in rts if r.get('isAvailable', False)] or rts
+print(avail[-1]['identifier'])
+")
+          echo "Using runtime: $RUNTIME"
+          UDID=$(xcrun simctl create "CI-iPhone" "iPhone 16" "$RUNTIME")
+          xcrun simctl boot "$UDID"
+          echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
+
       - name: Test
         run: |
           xcodebuild test \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
-            -destination "$DESTINATION" \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO
 
