@@ -55,6 +55,7 @@ jobs:
           key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-${{ runner.os }}-
+          save-always: true
 
       - name: SPM cache status
         run: |
@@ -74,6 +75,10 @@ jobs:
             -destination "platform=iOS Simulator,name=iPhone 16" \
             -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions --report-path . --report junit
+
+      - name: Debug report files
+        if: always()
+        run: ls -la *.junit *.xml 2>/dev/null || echo "No report files found"
 
       - name: Report test results
         if: always()
