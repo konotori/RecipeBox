@@ -93,7 +93,7 @@ jobs:
         if: failure()
         run: |
           brew install xcresultparser
-          xcresultparser -o github -f TestResults.xcresult
+          xcresultparser -o cli -f TestResults.xcresult
           xcresultparser -o md -f TestResults.xcresult >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save SPM cache
