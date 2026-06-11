@@ -33,6 +33,7 @@ jobs:
   # Job 2: build and run unit tests
   test:
     runs-on: macos-15
+    timeout-minutes: 30
     env:
       PROJECT: RecipeBox.xcodeproj
       SCHEME: RecipeBox-Dev
@@ -52,11 +53,6 @@ jobs:
           key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-${{ runner.os }}-
-
-      - name: SPM cache status
-        run: |
-          echo "Cache hit: ${{ steps.spm-cache.outputs.cache-hit }}"
-          ls SourcePackages/checkouts/ 2>/dev/null || echo "(empty — will be fetched)"
 
       - name: Install xcbeautify
         run: brew install xcbeautify
