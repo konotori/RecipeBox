@@ -90,12 +90,49 @@ jobs:
           path: xcodebuild.log
 
       - name: Publish test report
-        if: always()
-        uses: kishikawakatsumi/xcresulttool@v1
-        with:
-          path: TestResults.xcresult
-          show-passed-tests: false
-          upload-bundles: failure
+        if: failure()
+        run: |
+          python3 - <<'EOF'
+          import json, subprocess, os, sys
+
+          def xcresult_get(*args):
+              r = subprocess.run(
+                  ['xcrun', 'xcresulttool', 'get', '--legacy', '--format', 'json',
+                   '--path', 'TestResults.xcresult'] + list(args),
+                  capture_output=True, text=True)
+              return (json.loads(r.stdout), None) if r.returncode == 0 else (None, r.stderr)
+
+          # Load top-level record
+          data, err = xcresult_get()
+          if not data:
+              print("xcresulttool failed:", err); sys.exit(0)
+
+          # Dump 500 chars to see structure
+          print("TOP-LEVEL KEYS:", list(data.keys()))
+          ref_id = None
+          for action in data.get('actions', {}).get('_values', []):
+              ref = action.get('actionResult', {}).get('testsRef', {})
+              ref_id = ref.get('id', {}).get('_value')
+              if ref_id: break
+          print("ref_id:", ref_id)
+
+          if not ref_id:
+              print("No testsRef found"); sys.exit(0)
+
+          test_data, err2 = xcresult_get('--id', ref_id)
+          if not test_data:
+              print("test_data load failed:", err2); sys.exit(0)
+
+          # Search for 'Failure' in the whole JSON
+          raw = json.dumps(test_data)
+          idx = raw.find('"Failure"')
+          print(f"'Failure' found at index {idx}")
+          if idx >= 0:
+              print("Context:", raw[max(0,idx-200):idx+300])
+          else:
+              print("TOP-LEVEL KEYS of test_data:", list(test_data.keys()))
+              print("test_data[:800]:", raw[:800])
+          EOF
 
       - name: Save SPM cache
         if: always()
