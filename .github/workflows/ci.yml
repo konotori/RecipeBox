@@ -123,15 +123,27 @@ jobs:
           if not test_data:
               print("test_data load failed:", err2); sys.exit(0)
 
-          # Search for 'Failure' in the whole JSON
-          raw = json.dumps(test_data)
-          idx = raw.find('"Failure"')
-          print(f"'Failure' found at index {idx}")
-          if idx >= 0:
-              print("Context:", raw[max(0,idx-200):idx+300])
-          else:
-              print("TOP-LEVEL KEYS of test_data:", list(test_data.keys()))
-              print("test_data[:800]:", raw[:800])
+          # Find all nodes with testStatus == Failure
+          def find_failures(node, depth=0):
+              if not isinstance(node, dict): return
+              status = node.get('testStatus', {}).get('_value', '')
+              if status == 'Failure':
+                  ntype = node.get('_type', {}).get('_name', '?')
+                  name = (node.get('identifier', {}).get('_value') or
+                          node.get('name', {}).get('_value') or '—')
+                  print(f"FAIL d={depth} type={ntype} name={name}")
+                  print(f"  keys={list(node.keys())}")
+                  fs = node.get('failureSummaries', {}).get('_values', [])
+                  print(f"  failureSummaries={len(fs)}")
+                  for f in fs:
+                      print(f"  msg={f.get('message',{}).get('_value','')}")
+                  sr = node.get('summaryRef', {}).get('id', {}).get('_value')
+                  print(f"  summaryRef={sr}")
+              for v in node.values():
+                  for item in (v if isinstance(v, list) else [v]):
+                      find_failures(item, depth+1)
+
+          find_failures(test_data)
           EOF
 
       - name: Save SPM cache
