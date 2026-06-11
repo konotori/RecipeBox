@@ -47,20 +47,18 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Cache SPM packages
+      - name: Restore SPM cache
         id: spm-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             spm-${{ runner.os }}-
-          save-always: true
 
       - name: SPM cache status
         run: |
           echo "Cache hit: ${{ steps.spm-cache.outputs.cache-hit }}"
-          echo "Packages in SourcePackages:"
           ls SourcePackages/checkouts/ 2>/dev/null || echo "(empty — will be fetched)"
 
       - name: Install xcbeautify
@@ -76,16 +74,19 @@ jobs:
             -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions --report-path . --report junit
 
-      - name: Debug report files
+      - name: Save SPM cache
         if: always()
-        run: ls -la *.junit *.xml 2>/dev/null || echo "No report files found"
+        uses: actions/cache/save@v4
+        with:
+          path: SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
 
       - name: Report test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Unit Tests
-          path: report.junit
+          path: junit.xml
           reporter: java-junit
           fail-on-error: false
 
