@@ -114,58 +114,43 @@ jobs:
               print(f"xcresulttool new API failed: {err}")
               sys.exit(0)
 
-          # --- Step 2: walk tree, collect failed test cases (leaf nodes only) ---
-          def collect_failed(nodes):
-              results = []
+          # --- Step 2: find first failing Test Case node (any depth) and print its raw JSON ---
+          def find_first_failing(nodes):
               for node in (nodes or []):
                   result = (node.get('result') or '').lower()
-                  ntype  = (node.get('nodeType') or '').lower()
-                  node_id = node.get('nodeIdentifier', '')
-                  children = node.get('children', [])
-                  # Leaf test-case nodes have no children and a valid nodeIdentifier
-                  if result in ('failed', 'failure') and not children and node_id:
-                      results.append({'id': node_id, 'name': node.get('name', '?')})
-                  else:
-                      results.extend(collect_failed(children))
-              return results
+                  ntype  = (node.get('nodeType') or '')
+                  if result in ('failed', 'failure') and 'Test Case' in ntype:
+                      return node
+                  found = find_first_failing(node.get('children', []))
+                  if found:
+                      return found
+              return None
 
-          failed = collect_failed(tests.get('testNodes', []))
-          if not failed:
-              print("No failed leaf test cases found")
-              print("Top-level keys:", list(tests.keys()))
-              if tests.get('testNodes'):
-                  print("First node sample:", json.dumps(tests['testNodes'][0])[:600])
+          failing_node = find_first_failing(tests.get('testNodes', []))
+          if not failing_node:
+              print("No failing Test Case node found at all")
+              # Print a deeper sample to understand the tree
+              def show_tree(nodes, depth=0):
+                  for n in (nodes or [])[:3]:
+                      print("  "*depth + f"type={n.get('nodeType')} result={n.get('result')} name={n.get('name','?')[:40]} id={n.get('nodeIdentifier','')[:40]}")
+                      show_tree(n.get('children',[]), depth+1)
+              show_tree(tests.get('testNodes', []))
               sys.exit(0)
 
-          # --- Step 3: get details and extract failure message from testRuns ---
-          summary_path = os.environ.get('GITHUB_STEP_SUMMARY', '')
-          md = ['## Test Failures\n\n| Test | Location | Message |\n|------|----------|---------|\n']
+          node_id = failing_node.get('nodeIdentifier', '')
+          print(f"Failing node: name={failing_node.get('name')} id={node_id}")
+          print(f"Failing node raw: {json.dumps(failing_node)[:800]}")
 
-          for f in failed:
-              details, err2 = xcresulttool('get', 'test-results', 'test-details', '--test-id', f['id'])
-
-              msg, file_, line = f"(details unavailable: {err2})", '', ''
-              if details:
-                  # testRuns contains per-run details including failure messages
-                  for run in (details.get('testRuns') or []):
-                      failures = run.get('testRunFailureMessages') or []
-                      if failures:
-                          first = failures[0]
-                          msg   = first.get('message') or str(first)
-                          src   = first.get('sourceCodeContext') or {}
-                          loc   = src.get('location') or {}
-                          file_ = loc.get('filePath', '').split('/RecipeBox/')[-1]
-                          line  = str(loc.get('lineNumber') or '')
-                          break
-                  if msg.startswith('(details'):  # not found yet, try top-level
-                      msg = details.get('message') or details.get('failureMessage') or '(no message)'
-
-              loc_str = f"{file_}:{line}" if file_ and line else file_ or '—'
-              if file_ and line:
-                  print(f"::error file={file_},line={line}::{f['name']}: {msg}")
-              else:
-                  print(f"::error::{f['name']}: {msg}")
-              md.append(f"| `{f['name']}` | `{loc_str}` | {msg} |\n")
+          # --- Step 3: get full test-details and print raw ---
+          details, err2 = xcresulttool('get', 'test-results', 'test-details', '--test-id', node_id)
+          if not details:
+              print(f"test-details failed: {err2}")
+              sys.exit(0)
+          print(f"test-details keys: {list(details.keys())}")
+          # Print testRuns structure
+          for i, run in enumerate(details.get('testRuns', [])[:2]):
+              print(f"testRuns[{i}] keys: {list(run.keys())}")
+              print(f"testRuns[{i}][:600]: {json.dumps(run)[:600]}")
 
           if summary_path:
               open(summary_path, 'a').write(''.join(md))
