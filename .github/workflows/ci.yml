@@ -33,9 +33,6 @@ jobs:
   # Job 2: build and run unit tests
   test:
     runs-on: macos-15
-    permissions:
-      checks: write
-      pull-requests: write
     env:
       PROJECT: RecipeBox.xcodeproj
       SCHEME: RecipeBox-Dev
@@ -88,13 +85,6 @@ jobs:
         with:
           name: xcodebuild-log
           path: xcodebuild.log
-
-      - name: Publish test report
-        if: failure()
-        run: |
-          brew install xcresultparser
-          xcresultparser -o cli -f TestResults.xcresult
-          xcresultparser -o md -f TestResults.xcresult >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save SPM cache
         if: always()
