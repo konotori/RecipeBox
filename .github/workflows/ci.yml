@@ -33,6 +33,9 @@ jobs:
   # Job 2: build and run unit tests
   test:
     runs-on: macos-15
+    permissions:
+      checks: write
+      pull-requests: write
     env:
       PROJECT: RecipeBox.xcodeproj
       SCHEME: RecipeBox-Dev
@@ -69,87 +72,30 @@ jobs:
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,name=iPhone 16" \
             -clonedSourcePackagesDirPath SourcePackages \
-            -resultBundlePath result.xcresult \
-            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee xcodebuild.log | xcbeautify --renderer github-actions
 
-      - name: Report test failures
+      - name: Upload xcresult
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults.xcresult
+
+      - name: Upload xcodebuild log
         if: failure()
-        run: |
-          python3 - <<'EOF'
-          import json, subprocess, os, sys
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
 
-          def xcresulttool(*args):
-              r = subprocess.run(
-                  ['xcrun', 'xcresulttool', 'get', '--legacy', '--format', 'json', '--path', 'result.xcresult'] + list(args),
-                  capture_output=True, text=True)
-              return json.loads(r.stdout) if r.returncode == 0 else None
-
-          def collect_failures(node):
-              if not isinstance(node, dict):
-                  return []
-              failures = []
-              if node.get('_type', {}).get('_name') in ('ActionTestCaseRun', 'ActionTestMetadata'):
-                  if node.get('testStatus', {}).get('_value') == 'Failure':
-                      name = node.get('name', {}).get('_value', '?')
-                      for fs in node.get('failureSummaries', {}).get('_values', []):
-                          msg  = fs.get('message', {}).get('_value', '')
-                          loc  = fs.get('sourceCodeContext', {}).get('location', {})
-                          file = loc.get('filePath', {}).get('_value', '')
-                          line = loc.get('lineNumber', {}).get('_value', '')
-                          failures.append({'name': name, 'msg': msg, 'file': file, 'line': line})
-              for v in node.values():
-                  for item in (v if isinstance(v, list) else [v]):
-                      failures.extend(collect_failures(item))
-              return failures
-
-          # Debug: list xcresult candidates and xcresulttool version
-          import glob
-          print("=== xcresult files ===")
-          for p in glob.glob('*.xcresult') + glob.glob('**/*.xcresult', recursive=True)[:5]:
-              print(p)
-          r_ver = subprocess.run(['xcrun', 'xcresulttool', 'version'], capture_output=True, text=True)
-          print("xcresulttool version:", r_ver.stdout.strip() or r_ver.stderr.strip())
-          r_raw = subprocess.run(
-              ['xcrun', 'xcresulttool', 'get', '--legacy', '--format', 'json', '--path', 'result.xcresult'],
-              capture_output=True, text=True)
-          print("exit code:", r_raw.returncode)
-          print("stderr:", r_raw.stderr[:300] if r_raw.stderr else "(none)")
-          print("stdout[:200]:", r_raw.stdout[:200] if r_raw.stdout else "(empty)")
-
-          data = xcresulttool()
-          if not data:
-              print("xcresulttool get failed"); sys.exit(0)
-
-          ref_id = None
-          for action in data.get('actions', {}).get('_values', []):
-              ref = action.get('actionResult', {}).get('testsRef', {})
-              ref_id = ref.get('id', {}).get('_value')
-              if ref_id: break
-
-          test_data = xcresulttool('--id', ref_id) if ref_id else None
-          if not test_data:
-              print("Could not load test ref"); sys.exit(0)
-
-          failures = collect_failures(test_data)
-          if not failures:
-              print("No failures found"); sys.exit(0)
-
-          summary_path = os.environ.get('GITHUB_STEP_SUMMARY', '')
-          md = ['## Test Failures\n\n| Test | Location | Message |\n|------|----------|---------|\n']
-
-          for f in failures:
-              rel = f['file'].split('/RecipeBox/')[-1] if '/RecipeBox/' in f['file'] else f['file']
-              loc = f'{rel}:{f["line"]}' if rel and f['line'] else rel or '—'
-              # GitHub Actions inline annotation
-              if rel and f['line']:
-                  print(f'::error file={rel},line={f["line"]}::{f["name"]}: {f["msg"]}')
-              else:
-                  print(f'::error::{f["name"]}: {f["msg"]}')
-              md.append(f'| `{f["name"]}` | `{loc}` | {f["msg"]} |\n')
-
-          if summary_path:
-              open(summary_path, 'a').write(''.join(md))
-          EOF
+      - name: Publish test report
+        if: always()
+        uses: kishikawakatsumi/xcresulttool@v1
+        with:
+          path: TestResults.xcresult
+          show-passed-tests: false
+          upload-bundles: failure
 
       - name: Save SPM cache
         if: always()
