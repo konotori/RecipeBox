@@ -95,55 +95,82 @@ jobs:
           python3 - <<'EOF'
           import json, subprocess, os, sys
 
-          def xcresult_get(*args):
+          XCRESULT = 'TestResults.xcresult'
+
+          def xcresulttool(*args):
               r = subprocess.run(
-                  ['xcrun', 'xcresulttool', 'get', '--legacy', '--format', 'json',
-                   '--path', 'TestResults.xcresult'] + list(args),
+                  ['xcrun', 'xcresulttool'] + list(args) + ['--path', XCRESULT],
                   capture_output=True, text=True)
-              return (json.loads(r.stdout), None) if r.returncode == 0 else (None, r.stderr)
+              if r.returncode != 0:
+                  return None, r.stderr.strip()
+              try:
+                  return json.loads(r.stdout), None
+              except Exception as e:
+                  return None, f"JSON parse error: {e}"
 
-          # Load top-level record
-          data, err = xcresult_get()
-          if not data:
-              print("xcresulttool failed:", err); sys.exit(0)
+          # --- Step 1: get test list (new API, Xcode 16+) ---
+          tests, err = xcresulttool('get', 'test-results', 'tests')
+          if not tests:
+              print(f"xcresulttool new API failed: {err}")
+              sys.exit(0)
 
-          # Dump 500 chars to see structure
-          print("TOP-LEVEL KEYS:", list(data.keys()))
-          ref_id = None
-          for action in data.get('actions', {}).get('_values', []):
-              ref = action.get('actionResult', {}).get('testsRef', {})
-              ref_id = ref.get('id', {}).get('_value')
-              if ref_id: break
-          print("ref_id:", ref_id)
+          # --- Step 2: walk tree and collect failed test nodeIdentifiers ---
+          def collect_failed(nodes):
+              results = []
+              for node in (nodes or []):
+                  result = (node.get('result') or '').lower()
+                  ntype  = (node.get('nodeType') or '').lower()
+                  if result in ('failed', 'failure') and 'test' in ntype and 'class' not in ntype and 'bundle' not in ntype and 'plan' not in ntype:
+                      results.append({
+                          'id':   node.get('nodeIdentifier', ''),
+                          'name': node.get('name', '?'),
+                      })
+                  results.extend(collect_failed(node.get('children', [])))
+              return results
 
-          if not ref_id:
-              print("No testsRef found"); sys.exit(0)
+          failed = collect_failed(tests.get('testNodes', []))
+          if not failed:
+              print("No failed test cases found in test tree")
+              print("Top-level keys:", list(tests.keys()))
+              if tests.get('testNodes'):
+                  print("First node sample:", json.dumps(tests['testNodes'][0])[:400])
+              sys.exit(0)
 
-          test_data, err2 = xcresult_get('--id', ref_id)
-          if not test_data:
-              print("test_data load failed:", err2); sys.exit(0)
+          # --- Step 3: get details for each failure ---
+          summary_path = os.environ.get('GITHUB_STEP_SUMMARY', '')
+          md = ['## Test Failures\n\n| Test | Location | Message |\n|------|----------|---------|\n']
 
-          # Find all nodes with testStatus == Failure
-          def find_failures(node, depth=0):
-              if not isinstance(node, dict): return
-              status = node.get('testStatus', {}).get('_value', '')
-              if status == 'Failure':
-                  ntype = node.get('_type', {}).get('_name', '?')
-                  name = (node.get('identifier', {}).get('_value') or
-                          node.get('name', {}).get('_value') or '—')
-                  print(f"FAIL d={depth} type={ntype} name={name}")
-                  print(f"  keys={list(node.keys())}")
-                  fs = node.get('failureSummaries', {}).get('_values', [])
-                  print(f"  failureSummaries={len(fs)}")
-                  for f in fs:
-                      print(f"  msg={f.get('message',{}).get('_value','')}")
-                  sr = node.get('summaryRef', {}).get('id', {}).get('_value')
-                  print(f"  summaryRef={sr}")
-              for v in node.values():
-                  for item in (v if isinstance(v, list) else [v]):
-                      find_failures(item, depth+1)
+          for f in failed:
+              details, err2 = xcresulttool('get', 'test-results', 'test-details', '--test-id', f['id'])
 
-          find_failures(test_data)
+              if not details:
+                  msg, file_, line = f"(details unavailable: {err2})", '', ''
+              else:
+                  # Extract failure message — try common field names
+                  issues = details.get('issues') or []
+                  if issues:
+                      first = issues[0]
+                      msg   = first.get('message') or first.get('description') or '(no message)'
+                      file_ = first.get('sourceURL', '').split('/RecipeBox/')[-1].split('?')[0]
+                      line  = str(first.get('lineNumber') or '')
+                  else:
+                      msg   = details.get('message') or details.get('failureMessage') or '(no message)'
+                      file_ = ''
+                      line  = ''
+                      # Debug: show structure if we haven't extracted anything useful
+                      if msg == '(no message)':
+                          print(f"details keys for {f['name']}: {list(details.keys())}")
+                          print(f"details[:400]: {json.dumps(details)[:400]}")
+
+              loc = f"{file_}:{line}" if file_ and line else file_ or '—'
+              if file_ and line:
+                  print(f"::error file={file_},line={line}::{f['name']}: {msg}")
+              else:
+                  print(f"::error::{f['name']}: {msg}")
+              md.append(f"| `{f['name']}` | `{loc}` | {msg} |\n")
+
+          if summary_path:
+              open(summary_path, 'a').write(''.join(md))
           EOF
 
       - name: Save SPM cache
