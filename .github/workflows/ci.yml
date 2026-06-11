@@ -80,7 +80,7 @@ jobs:
 
           def xcresulttool(*args):
               r = subprocess.run(
-                  ['xcrun', 'xcresulttool', 'get', '--format', 'json', '--path', 'result.xcresult'] + list(args),
+                  ['xcrun', 'xcresulttool', 'get', '--legacy', '--format', 'json', '--path', 'result.xcresult'] + list(args),
                   capture_output=True, text=True)
               return json.loads(r.stdout) if r.returncode == 0 else None
 
@@ -110,7 +110,7 @@ jobs:
           r_ver = subprocess.run(['xcrun', 'xcresulttool', 'version'], capture_output=True, text=True)
           print("xcresulttool version:", r_ver.stdout.strip() or r_ver.stderr.strip())
           r_raw = subprocess.run(
-              ['xcrun', 'xcresulttool', 'get', '--format', 'json', '--path', 'result.xcresult'],
+              ['xcrun', 'xcresulttool', 'get', '--legacy', '--format', 'json', '--path', 'result.xcresult'],
               capture_output=True, text=True)
           print("exit code:", r_raw.returncode)
           print("stderr:", r_raw.stderr[:300] if r_raw.stderr else "(none)")
