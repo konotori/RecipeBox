@@ -56,7 +56,7 @@ Pick a scheme — **RecipeBox-Dev** / **-Staging** / **-Prod** — and run. Dev/
 | Full gate (what CI runs) | `make verify` |
 | Tests | `xcodebuild test -scheme RecipeBox-Dev …` |
 
-CI: `.github/workflows/ci.yml` runs lint + test + a duplicate-image gate (on PRs it flags duplicates the PR introduces; on push to `main`, any duplicate), and `hygiene.yml` runs a weekly unused-image scan. The layered-gates rationale is in [docs/CI.md](docs/CI.md); what each image check covers is in [docs/IMAGE_HYGIENE.md](docs/IMAGE_HYGIENE.md). (A renamable `ci.yml.example` starter also ships for fresh clones.)
+CI: `.github/workflows/ci.yml` runs lint + test + a duplicate-image gate (on PRs it flags duplicates the PR introduces; on push to `main`, any duplicate), and `hygiene.yml` runs weekly advisory scans (unused images + dead Swift code via Periphery). The layered-gates rationale is in [docs/CI.md](docs/CI.md); the image checks are in [docs/IMAGE_HYGIENE.md](docs/IMAGE_HYGIENE.md) and the dead-code scan in [docs/DEAD_CODE.md](docs/DEAD_CODE.md). (A renamable `ci.yml.example` starter also ships for fresh clones.)
 
 ## Architecture & conventions
 

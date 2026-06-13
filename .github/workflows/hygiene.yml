@@ -1,11 +1,11 @@
-name: Image hygiene
+name: Hygiene
 
-# Weekly unused-image scan + a self-test that protects the tools. Duplicate
-# images are gated entirely in ci.yml (on every PR and every push to main), so
-# they are not scanned here.
+# Weekly advisory hygiene (unused images + dead Swift code) + a self-test that
+# protects the image tools. Duplicate images are gated entirely in ci.yml (on
+# every PR and every push to main), so they are not scanned here.
 #
 # Triggers:
-#   - schedule / workflow_dispatch: run the weekly unused scan + the self-test.
+#   - schedule / workflow_dispatch: run the weekly scans + the self-test.
 #   - push / pull_request limited to the hygiene scripts: run the self-test
 #     only, so changes to the tools are verified without burdening other PRs.
 #
@@ -35,6 +35,7 @@ concurrency:
 
 env:
   FENGNIAO_VERSION: '0.13.0'
+  PERIPHERY_VERSION: '3.7.4'
 
 jobs:
   # Protect the tools: build fixtures for every case and assert the reports.
@@ -88,6 +89,31 @@ jobs:
         with:
           name: unused-images-report
           path: unused.md
+
+  # Weekly advisory: unused (dead) Swift code via Periphery. Builds + indexes the
+  # project (macOS), inherently fuzzy (reflection/@objc), so ADVISORY only.
+  # .periphery.yml suppresses common false positives; see docs/DEAD_CODE.md.
+  dead-code:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Install Periphery (pinned release binary)
+        run: |
+          curl -sSL -o /tmp/periphery.zip \
+            "https://github.com/peripheryapp/periphery/releases/download/${PERIPHERY_VERSION}/periphery-${PERIPHERY_VERSION}.zip"
+          mkdir -p /tmp/periphery && unzip -oq /tmp/periphery.zip -d /tmp/periphery
+      - name: Scan for unused code
+        run: /tmp/periphery/periphery scan --config .periphery.yml --format xcode | tee dead-code.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dead-code-report
+          path: dead-code.txt
 
   # Note: there is no weekly duplicate scan. Duplicates are gated in ci.yml on
   # every PR (incrementally) AND on every push to main (whole-project), so a
