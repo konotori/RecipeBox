@@ -40,8 +40,10 @@ batches. FengNiao is pinned and its Mint build is cached.
 - **Asset-catalog aware**: slots inside one set (e.g. `@1x/@2x/@3x` of an
   `.imageset`, or the sizes of an `.appiconset`) are never flagged against each
   other; identical images across *different* sets are.
-- Formats Pillow can't decode (`.pdf`) fall back to a byte hash, so only
-  byte-identical copies are reported for them.
+- Scans the same image formats as `check_image_size.sh`
+  (png/jpg/jpeg/heic/webp/gif/pdf/svg, plus bmp/tiff). png/jpg/webp/bmp/tiff are
+  pixel-hashed; `.pdf/.svg/.heic/.gif` fall back to a byte hash (only
+  byte-identical copies are reported for them).
 
 ### What duplicate detection does NOT catch (by design)
 
@@ -58,8 +60,8 @@ misses ambiguous cases that would otherwise need human triage anyway:
   Contents.json parsing required to detect it precisely.
 - **Cross-format copies** — the same image stored as both PNG and JPG (lossy
   decode differs), or PNG vs PDF.
-- **PDF/GIF** — compared by raw bytes only; visually-identical files with
-  different bytes are not matched.
+- **PDF/SVG/HEIC/GIF** — compared by raw bytes only; visually-identical files
+  with different bytes (or vectors that render the same) are not matched.
 - **Out of scan scope** — assets in other targets / SPM resource bundles, and
   network images (`RemoteImage`/`AsyncImage`), are not considered.
 
