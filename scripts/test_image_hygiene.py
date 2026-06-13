@@ -241,11 +241,51 @@ def test_unused(base: Path) -> None:
           "U4 dynamic icon_* rescued by allowlist")
 
 
+def test_gate(base: Path) -> None:
+    """PR gate: only newly-introduced duplicates should fail the check."""
+    root = base / "gate"
+    cat = root / "Assets.xcassets"
+
+    pre = (11, 22, 33)  # a duplicate that already exists in the repo
+    solid(cat / "preA.imageset" / "preA.png", (16, 16), pre)
+    contents_json(cat / "preA.imageset", ["preA.png"])
+    solid(cat / "preB.imageset" / "preB.png", (16, 16), pre)
+    contents_json(cat / "preB.imageset", ["preB.png"])
+
+    new = (44, 55, 66)  # a duplicate a PR would add
+    newA = cat / "newA.imageset" / "newA.png"
+    newB = cat / "newB.imageset" / "newB.png"
+    solid(newA, (16, 16), new); contents_json(cat / "newA.imageset", ["newA.png"])
+    solid(newB, (16, 16), new); contents_json(cat / "newB.imageset", ["newB.png"])
+
+    other = cat / "solo.imageset" / "solo.png"  # unrelated, not a duplicate
+    solid(other, (16, 16), (1, 2, 3))
+    contents_json(cat / "solo.imageset", ["solo.png"])
+
+    def gate(changed) -> int:
+        argv = [PY, str(HERE / "find_duplicate_images.py"), str(root),
+                "--root", str(root), "--fail-on-found"]
+        if changed is not None:
+            cl = root / "changed.txt"
+            cl.write_text("\n".join(str(p) for p in changed) + "\n")
+            argv += ["--changed-list", str(cl)]
+        return subprocess.run(argv, capture_output=True, text=True).returncode
+
+    check(gate([newA, newB]) == 1,
+          "GATE fails when the PR introduces a new duplicate")
+    check(gate([other]) == 0,
+          "GATE passes when the PR's changes add no new duplicate "
+          "(pre-existing duplicate does not block)")
+    check(gate(None) == 1,
+          "GATE (whole-repo, no --changed-list) fails on any duplicate")
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp)
         test_duplicates(base)
         test_unused(base)
+        test_gate(base)
 
     passed = sum(1 for ok, _ in results if ok)
     print(f"\nImage-hygiene self-test: {passed}/{len(results)} checks passed\n")

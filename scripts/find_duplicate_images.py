@@ -104,10 +104,20 @@ def main() -> int:
                     help="Base path used to shorten labels (default: cwd).")
     ap.add_argument("--fail-on-found", action="store_true",
                     help="Exit non-zero when duplicates are found (for gating).")
+    ap.add_argument("--changed-list",
+                    help="File of changed paths (one per line). With "
+                         "--fail-on-found, only fail for duplicate groups that "
+                         "include a changed file (i.e. introduced by this PR).")
     args = ap.parse_args()
 
     roots = [Path(p).resolve() for p in (args.paths or ["."])]
     base = Path(args.root).resolve()
+
+    changed: set[Path] | None = None
+    if args.changed_list:
+        changed = {Path(line.strip()).resolve()
+                   for line in Path(args.changed_list).read_text().splitlines()
+                   if line.strip()}
 
     groups: dict[tuple[str, str], list[Path]] = defaultdict(list)
     for img in find_images(roots):
@@ -124,6 +134,10 @@ def main() -> int:
             continue
         duplicates.append(sorted(files))
 
+    # A group is "introduced" if it contains a file changed by this PR.
+    def introduced(group: list[Path]) -> bool:
+        return changed is not None and any(f in changed for f in group)
+
     print("# Duplicate images report\n")
     if not duplicates:
         print("No duplicate images found. ✅")
@@ -132,8 +146,12 @@ def main() -> int:
     total = sum(len(g) - 1 for g in duplicates)
     print(f"Found {len(duplicates)} duplicate group(s), "
           f"~{total} redundant file(s). Review before deleting.\n")
+    new_groups = 0
     for i, group in enumerate(sorted(duplicates), 1):
-        print(f"## Group {i}")
+        is_new = introduced(group)
+        new_groups += is_new
+        tag = " ⚠️ introduced by this change" if is_new else ""
+        print(f"## Group {i}{tag}")
         for f in group:
             try:
                 lbl = label(f, base)
@@ -141,7 +159,12 @@ def main() -> int:
                 lbl = str(f)
             print(f"- {lbl}")
         print()
-    return 1 if args.fail_on_found else 0
+
+    if not args.fail_on_found:
+        return 0
+    # When given a changed-list, only gate on newly-introduced duplicates so
+    # pre-existing ones don't block unrelated PRs.
+    return 1 if (new_groups if changed is not None else duplicates) else 0
 
 
 if __name__ == "__main__":

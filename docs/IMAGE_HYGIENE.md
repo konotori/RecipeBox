@@ -30,14 +30,30 @@ FENGNIAO="$HOME/.mint/bin/fengniao" python scripts/test_image_hygiene.py
 
 ## CI
 
-`.github/workflows/hygiene.yml` runs weekly (Mon) + on demand
-(`workflow_dispatch`):
+`.github/workflows/hygiene.yml`:
 
-- **self-test** (macOS) — runs on every push and fails if either tool regresses.
-- **scan-duplicates** (Ubuntu, cheap — no Xcode) — uploads `duplicates.md`.
-- **scan-unused** (macOS — FengNiao is a Swift tool) — uploads `unused.md`.
+- **duplicates** (Ubuntu, cheap — no Xcode) — runs **on every PR as a soft
+  gate** *and* weekly as a backstop. See "When the PR gate fails" below.
+- **unused** (macOS — FengNiao is a Swift tool) — **weekly** advisory scan;
+  uploads `unused.md`. Kept off PRs on purpose: it's a whole-project, batch
+  cleanup task (like dead-code), not a per-PR check.
+- **self-test** (macOS) — runs on every push/PR and fails if either tool
+  regresses.
 
-Scans never fail the build; review the artifacts and clean up in batches.
+Each tool is placed at the layer that fits its nature: duplicates are precise
+and urgent-at-introduction → PR gate; unused is fuzzy and batch → weekly;
+oversized is instant and local → pre-commit (`check_image_size.sh`).
+
+### When the PR gate fails
+
+The duplicate check fails a PR **only for duplicates that PR introduces** — a
+pre-existing duplicate elsewhere in the repo will not block unrelated PRs (it
+diffs the PR against its base and gates on changed files). Because the detector
+is exact-match (essentially zero false positives), failing is safe.
+
+If a duplicate is **intentional**, override the gate by adding the
+`allow-duplicate-images` label to the PR (the job is then skipped). The weekly
+backstop still runs regardless.
 
 ---
 
