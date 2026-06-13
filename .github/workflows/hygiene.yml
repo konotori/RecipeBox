@@ -1,0 +1,96 @@
+name: Image hygiene
+
+# Periodic, advisory image-hygiene scan (duplicate + unused images) plus a
+# self-test that proves the tools behave correctly on every change.
+#
+# For template adoption: change `push.branches` to your default branch. Note
+# `schedule` only fires on the repository's default branch.
+on:
+  push:
+    branches: [test/image-hygiene]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * 1' # Mondays 01:00 UTC (~08:00 Asia/Ho_Chi_Minh)
+
+concurrency:
+  group: hygiene-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FENGNIAO_VERSION: '0.13.0'
+
+jobs:
+  # Gate: prove the two tools flag exactly the right cases. Fails the run on
+  # any regression. Needs both Pillow and FengNiao.
+  self-test:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: pip install Pillow
+
+      - name: Cache Mint
+        uses: actions/cache@v5
+        with:
+          path: ~/.mint
+          key: mint-fengniao-${{ env.FENGNIAO_VERSION }}
+
+      - name: Install FengNiao
+        run: |
+          brew install mint
+          mint install onevcat/FengNiao@${{ env.FENGNIAO_VERSION }}
+
+      - name: Run self-test
+        run: FENGNIAO="$HOME/.mint/bin/fengniao" python scripts/test_image_hygiene.py
+
+  # Real scan: duplicate images. No Xcode needed -> cheap Ubuntu runner.
+  scan-duplicates:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install Pillow
+      - name: Scan for duplicate images
+        run: python scripts/find_duplicate_images.py RecipeBox --root . | tee duplicates.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-images-report
+          path: duplicates.md
+
+  # Real scan: unused images. FengNiao is a Swift tool -> macOS runner.
+  scan-unused:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cache Mint
+        uses: actions/cache@v5
+        with:
+          path: ~/.mint
+          key: mint-fengniao-${{ env.FENGNIAO_VERSION }}
+      - name: Install FengNiao
+        run: |
+          brew install mint
+          mint install onevcat/FengNiao@${{ env.FENGNIAO_VERSION }}
+      - name: Scan for unused images
+        run: |
+          FENGNIAO="$HOME/.mint/bin/fengniao" \
+            python scripts/find_unused_images.py RecipeBox | tee unused.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unused-images-report
+          path: unused.md
