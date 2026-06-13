@@ -1,11 +1,11 @@
 name: Image hygiene
 
-# Scheduled, advisory image-hygiene scans + a self-test that protects the tools.
-# The per-PR duplicate gate lives in ci.yml (it's a normal PR check, next to
-# lint/test); this workflow holds the weekly batch work and the tool self-test.
+# Weekly unused-image scan + a self-test that protects the tools. Duplicate
+# images are gated entirely in ci.yml (on every PR and every push to main), so
+# they are not scanned here.
 #
 # Triggers:
-#   - schedule / workflow_dispatch: run the weekly scans + the self-test.
+#   - schedule / workflow_dispatch: run the weekly unused scan + the self-test.
 #   - push / pull_request limited to the hygiene scripts: run the self-test
 #     only, so changes to the tools are verified without burdening other PRs.
 #
@@ -89,21 +89,6 @@ jobs:
           name: unused-images-report
           path: unused.md
 
-  # Weekly advisory backstop: duplicates across the WHOLE project (the per-PR
-  # gate in ci.yml only sees each PR's own changes).
-  duplicate-backstop:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install Pillow
-      - name: Scan whole project for duplicate images
-        run: python scripts/find_duplicate_images.py RecipeBox --root . | tee duplicates.md
-      - uses: actions/upload-artifact@v4
-        with:
-          name: duplicate-images-report
-          path: duplicates.md
+  # Note: there is no weekly duplicate scan. Duplicates are gated in ci.yml on
+  # every PR (incrementally) AND on every push to main (whole-project), so a
+  # separate weekly whole-project pass would be redundant.
