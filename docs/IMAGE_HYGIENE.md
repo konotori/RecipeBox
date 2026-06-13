@@ -43,6 +43,29 @@ batches. FengNiao is pinned and its Mint build is cached.
 - Formats Pillow can't decode (`.pdf`) fall back to a byte hash, so only
   byte-identical copies are reported for them.
 
+### What duplicate detection does NOT catch (by design)
+
+Precision-first: it only flags pixel-identical copies, so it deliberately
+misses ambiguous cases that would otherwise need human triage anyway:
+
+- **Near-duplicates** — resized, recoloured, cropped, or lossily re-encoded
+  (e.g. re-saved JPEG) copies of the same artwork. The biggest intentional
+  gap; catching these needs a similarity threshold that produces false alarms.
+- **Intra-imageset duplicates** — identical slots *inside one* `.imageset`
+  (e.g. the same image used for both light and dark appearance). App thinning
+  already slices idiom/scale/gamut per device, so only the appearance/size-class
+  axes would be genuine waste, and that small/rare case isn't worth the
+  Contents.json parsing required to detect it precisely.
+- **Cross-format copies** — the same image stored as both PNG and JPG (lossy
+  decode differs), or PNG vs PDF.
+- **PDF/GIF** — compared by raw bytes only; visually-identical files with
+  different bytes are not matched.
+- **Out of scan scope** — assets in other targets / SPM resource bundles, and
+  network images (`RemoteImage`/`AsyncImage`), are not considered.
+
+This complements `scripts/check_image_size.sh` (a pre-commit guard against
+oversized images) — that checks file *size*, this checks *redundancy*.
+
 ## How unused detection works (and its limits)
 
 FengNiao extracts asset names and greps source for usages. The wrapper adds:
