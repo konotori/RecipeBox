@@ -56,11 +56,11 @@ Pick a scheme — **RecipeBox-Dev** / **-Staging** / **-Prod** — and run. Dev/
 | Full gate (what CI runs) | `make verify` |
 | Tests | `xcodebuild test -scheme RecipeBox-Dev …` |
 
-CI starter: `.github/workflows/ci.yml.example` (rename to `ci.yml` to enable; pick a runner whose Xcode matches the project).
+CI: `.github/workflows/ci.yml` runs lint + test + a duplicate-image PR gate, and `hygiene.yml` runs weekly unused/duplicate-image scans — what each image check covers is in [docs/IMAGE_HYGIENE.md](docs/IMAGE_HYGIENE.md). (A renamable `ci.yml.example` starter also ships for fresh clones.)
 
 ## Architecture & conventions
 
-The `docs/` folder (inherited from the template) documents the architecture, folder layout, conventions, and tooling in depth — start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/TOOLING.md](docs/TOOLING.md).
+The `docs/` folder (inherited from the template) documents the architecture, folder layout, conventions, and tooling in depth — start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/TOOLING.md](docs/TOOLING.md); the image checks are covered in [docs/IMAGE_HYGIENE.md](docs/IMAGE_HYGIENE.md).
 
 ## Credits
 
