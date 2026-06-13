@@ -119,6 +119,30 @@ def test_duplicates(base: Path) -> None:
     solid(cat / "BrandA.appiconset" / "a.png", (50, 50), brand)
     solid(cat / "BrandB.appiconset" / "b.png", (50, 50), brand)
 
+    # D11: identical webp across imagesets -> flagged (Pillow decodes webp).
+    solid(cat / "promo_a.imageset" / "promo_a.webp", (20, 20), (3, 140, 90))
+    contents_json(cat / "promo_a.imageset", ["promo_a.webp"])
+    solid(cat / "promo_b.imageset" / "promo_b.webp", (20, 20), (3, 140, 90))
+    contents_json(cat / "promo_b.imageset", ["promo_b.webp"])
+
+    # D12: byte-identical svg across imagesets -> flagged via byte hash.
+    svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="9" height="9"/></svg>\n'
+    (cat / "vsa.imageset").mkdir(parents=True)
+    (cat / "vsa.imageset" / "vsa.svg").write_text(svg)
+    contents_json(cat / "vsa.imageset", ["vsa.svg"])
+    (cat / "vsb.imageset").mkdir(parents=True)
+    (cat / "vsb.imageset" / "vsb.svg").write_text(svg)
+    contents_json(cat / "vsb.imageset", ["vsb.svg"])
+
+    # D13: byte-identical heic across imagesets -> flagged via byte fallback.
+    heic = b"\x00\x00\x00\x18ftypheic identical-payload"
+    (cat / "ph_a.imageset").mkdir(parents=True)
+    (cat / "ph_a.imageset" / "ph.heic").write_bytes(heic)
+    contents_json(cat / "ph_a.imageset", ["ph.heic"])
+    (cat / "ph_b.imageset").mkdir(parents=True)
+    (cat / "ph_b.imageset" / "ph.heic").write_bytes(heic)
+    contents_json(cat / "ph_b.imageset", ["ph.heic"])
+
     out = subprocess.run([PY, str(HERE / "find_duplicate_images.py"),
                           str(root), "--root", str(root)],
                          capture_output=True, text=True).stdout
@@ -150,6 +174,12 @@ def test_duplicates(base: Path) -> None:
           "D9 repeated slots inside one .appiconset NOT flagged")
     check(grouped_together("BrandA", "BrandB"),
           "D10 identical slot across two .appiconsets flagged")
+    check(grouped_together("promo_a", "promo_b"),
+          "D11 identical webp flagged (pixel path)")
+    check(grouped_together("vsa", "vsb"),
+          "D12 byte-identical svg flagged (byte fallback)")
+    check(grouped_together("ph_a", "ph_b"),
+          "D13 byte-identical heic flagged (byte fallback)")
 
 
 # --------------------------------------------------------------------------- #

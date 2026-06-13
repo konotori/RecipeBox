@@ -11,8 +11,8 @@ Detection strategy (precision-first, no similarity threshold):
   dimensions, so they hash differently and are never flagged against each
   other. Identical matches that live entirely within a single imageset are
   skipped defensively as well.
-- Formats Pillow cannot decode losslessly (pdf) fall back to a raw byte hash,
-  so only byte-identical copies are reported for them.
+- Formats Pillow cannot decode here (pdf/svg/heic/gif) fall back to a raw byte
+  hash, so only byte-identical copies are reported for them.
 
 This tool only REPORTS candidates for human review; it never deletes anything.
 """
@@ -32,9 +32,10 @@ except ImportError:
     raise SystemExit(2)
 
 # Extensions we attempt to decode with Pillow for a pixel-level hash.
-PIXEL_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif"}
-# Extensions we only byte-hash (Pillow can't decode them losslessly here).
-BYTE_EXTS = {".pdf", ".gif"}
+PIXEL_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif"}
+# Vector / undecodable formats — byte-hashed only (exact copies). Kept in sync
+# with the image formats scripts/check_image_size.sh recognises.
+BYTE_EXTS = {".pdf", ".svg", ".heic", ".gif"}
 IMAGE_EXTS = PIXEL_EXTS | BYTE_EXTS
 
 # Asset-catalog leaf containers. Slots inside ONE of these (e.g. the multiple
