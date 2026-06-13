@@ -88,3 +88,42 @@ jobs:
         with:
           path: SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('RecipeBox.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+  # Job 3: soft gate against NEWLY-introduced duplicate images. Fails only on
+  # duplicates this PR adds (pre-existing ones don't block). No Xcode needed, so
+  # it runs on a cheap Ubuntu runner. The weekly whole-project backstop and the
+  # unused scan live in hygiene.yml; see docs/IMAGE_HYGIENE.md.
+  duplicate-images:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # needed to diff the PR against its base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install Pillow
+
+      - name: Check for newly-introduced duplicate images
+        shell: bash
+        run: |
+          set -o pipefail
+          git diff --diff-filter=AMR --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}" > changed.txt || true
+          if grep -qiE '\.(png|jpg|jpeg|webp|bmp|tiff|tif|pdf|svg|heic|gif)$' changed.txt; then
+            python scripts/find_duplicate_images.py RecipeBox --root . \
+              --changed-list changed.txt --fail-on-found | tee duplicates.md
+          else
+            echo "No image files changed; skipping duplicate scan." | tee duplicates.md
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: duplicate-images-report
+          path: duplicates.md

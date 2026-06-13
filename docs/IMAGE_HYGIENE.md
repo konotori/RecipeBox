@@ -28,32 +28,35 @@ FENGNIAO="$HOME/.mint/bin/fengniao" python scripts/find_unused_images.py RecipeB
 FENGNIAO="$HOME/.mint/bin/fengniao" python scripts/test_image_hygiene.py
 ```
 
-## CI
+## CI — where each check runs
 
-`.github/workflows/hygiene.yml`:
+Each tool sits at the layer that fits its nature:
 
-- **duplicates** (Ubuntu, cheap — no Xcode) — runs **on every PR as a soft
-  gate** *and* weekly as a backstop. See "When the PR gate fails" below.
-- **unused** (macOS — FengNiao is a Swift tool) — **weekly** advisory scan;
-  uploads `unused.md`. Kept off PRs on purpose: it's a whole-project, batch
-  cleanup task (like dead-code), not a per-PR check.
-- **self-test** (macOS) — runs on every push/PR and fails if either tool
-  regresses.
+| Check | Workflow / job | Runs | Behaviour |
+| --- | --- | --- | --- |
+| Duplicate **gate** | `ci.yml` → `duplicate-images` | every PR | fails on duplicates the PR introduces |
+| Duplicate **backstop** | `hygiene.yml` → `duplicate-backstop` | weekly | advisory whole-project report |
+| Unused | `hygiene.yml` → `unused` | weekly | advisory report (`unused.md`) |
+| Self-test | `hygiene.yml` → `self-test` | weekly + when the scripts change | fails if a tool regresses |
 
-Each tool is placed at the layer that fits its nature: duplicates are precise
-and urgent-at-introduction → PR gate; unused is fuzzy and batch → weekly;
-oversized is instant and local → pre-commit (`check_image_size.sh`).
+Why this split: duplicates are precise and most useful *at introduction* → a PR
+gate, living in the normal PR CI (`ci.yml`) next to lint/test. Unused is fuzzy
+and best done in batches → weekly only. The self-test only needs to run when the
+hygiene scripts themselves change, so `hygiene.yml` is path-filtered to them.
 
-### When the PR gate fails
+### The PR duplicate gate
 
-The duplicate check fails a PR **only for duplicates that PR introduces** — a
-pre-existing duplicate elsewhere in the repo will not block unrelated PRs (it
-diffs the PR against its base and gates on changed files). Because the detector
-is exact-match (essentially zero false positives), failing is safe.
-
-If a duplicate is **intentional**, override the gate by adding the
-`allow-duplicate-images` label to the PR (the job is then skipped). The weekly
-backstop still runs regardless.
+- It fails a PR **only for duplicates that PR introduces** — it diffs the PR
+  against its base and gates on changed files, so a pre-existing duplicate
+  elsewhere never blocks an unrelated PR.
+- If the PR changes no image files, the job exits early (nothing to scan).
+- Because the detector is exact-match (essentially zero false positives),
+  failing is safe.
+- It's a **soft** gate: keep it out of *required* status checks so a red result
+  is an informative warning a maintainer can still merge past. Intentional
+  duplicates are rare; resolve them, or merge with maintainer discretion.
+- The weekly `duplicate-backstop` still catches anything that lands on the
+  default branch outside a PR (e.g. a direct push).
 
 ---
 
@@ -199,11 +202,14 @@ format list with the duplicate detector.
 
 ## Adopting in another project / the template
 
-- Point `hygiene.yml`'s `push.branches` at your default branch (GitHub only fires
-  `schedule` on the default branch). In the iOSAppTemplate starter, ship it as
-  `hygiene.yml.example` per the repo convention.
+- The **duplicate gate** is a job in `ci.yml`; it runs on every PR with no extra
+  setup. Keep it **out of required status checks** to preserve the soft-gate
+  behaviour.
+- `hygiene.yml` holds the weekly scans + self-test. `schedule` only fires on the
+  default branch. In the iOSAppTemplate starter, ship workflows per the repo
+  convention (e.g. `*.yml.example`).
 - `image-allowlist.txt` ships empty (examples only) — each project adds its own
-  dynamic-name patterns; until then `scan-unused` has no allowlist protection.
+  dynamic-name patterns; until then the unused scan has no allowlist protection.
 - Adjust the scanned path (`RecipeBox`) and `--extra-glob` as needed.
 - Keep the image-format list in sync between `find_duplicate_images.py` and
   `check_image_size.sh`.
