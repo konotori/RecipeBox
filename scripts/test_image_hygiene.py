@@ -108,6 +108,17 @@ def test_duplicates(base: Path) -> None:
     (cat / "vec_b.imageset" / "vec.pdf").write_bytes(pdf_bytes)
     contents_json(cat / "vec_b.imageset", ["vec.pdf"])
 
+    # D9: repeated identical slots inside ONE .appiconset -> NOT flagged
+    # (app icons legitimately reuse the same image across sizes).
+    icon = (7, 7, 7)
+    solid(cat / "AppIcon.appiconset" / "icon-40.png", (40, 40), icon)
+    solid(cat / "AppIcon.appiconset" / "icon-60.png", (40, 40), icon)
+
+    # D10: identical slot across two DIFFERENT .appiconsets -> flagged.
+    brand = (8, 9, 10)
+    solid(cat / "BrandA.appiconset" / "a.png", (50, 50), brand)
+    solid(cat / "BrandB.appiconset" / "b.png", (50, 50), brand)
+
     out = subprocess.run([PY, str(HERE / "find_duplicate_images.py"),
                           str(root), "--root", str(root)],
                          capture_output=True, text=True).stdout
@@ -135,6 +146,10 @@ def test_duplicates(base: Path) -> None:
           "D7 identical files inside one imageset NOT flagged (defensive)")
     check(grouped_together("vec_a", "vec_b"),
           "D8 byte-identical PDFs flagged via byte fallback")
+    check(not flagged("AppIcon"),
+          "D9 repeated slots inside one .appiconset NOT flagged")
+    check(grouped_together("BrandA", "BrandB"),
+          "D10 identical slot across two .appiconsets flagged")
 
 
 # --------------------------------------------------------------------------- #

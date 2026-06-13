@@ -37,11 +37,20 @@ PIXEL_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif"}
 BYTE_EXTS = {".pdf", ".gif"}
 IMAGE_EXTS = PIXEL_EXTS | BYTE_EXTS
 
+# Asset-catalog leaf containers. Slots inside ONE of these (e.g. the multiple
+# sizes of an .appiconset, or @1x/@2x/@3x of an .imageset) are expected to
+# repeat and must not be flagged against each other.
+CATALOG_SET_SUFFIXES = {
+    ".imageset", ".appiconset", ".launchimage", ".symbolset",
+    ".stickersequence", ".imagestack", ".imagestacklayer",
+    ".cubetextureset", ".textureset", ".mipmapset", ".brandassets",
+}
 
-def imageset_of(path: Path) -> Path | None:
-    """Return the nearest ancestor *.imageset directory, or None if loose."""
+
+def catalog_set_of(path: Path) -> Path | None:
+    """Return the nearest ancestor asset-catalog set dir, or None if loose."""
     for parent in path.parents:
-        if parent.suffix == ".imageset":
+        if parent.suffix in CATALOG_SET_SUFFIXES:
             return parent
     return None
 
@@ -66,10 +75,10 @@ def content_key(path: Path) -> tuple[str, str]:
 
 
 def label(path: Path, root: Path) -> str:
-    """Human label: the imageset name if inside one, else the relative path."""
-    iset = imageset_of(path)
-    if iset is not None:
-        return f"{iset.relative_to(root)} ({path.name})"
+    """Human label: the catalog-set name if inside one, else the relative path."""
+    cset = catalog_set_of(path)
+    if cset is not None:
+        return f"{cset.relative_to(root)} ({path.name})"
     return str(path.relative_to(root))
 
 
@@ -107,9 +116,10 @@ def main() -> int:
     for _, files in groups.items():
         if len(files) < 2:
             continue
-        # Skip groups confined to a single imageset (expected scale variants).
-        isets = {imageset_of(f) for f in files}
-        if len(isets) == 1 and None not in isets:
+        # Skip groups confined to a single catalog set (expected repeated slots
+        # / scale variants, e.g. inside one .appiconset or .imageset).
+        sets = {catalog_set_of(f) for f in files}
+        if len(sets) == 1 and None not in sets:
             continue
         duplicates.append(sorted(files))
 
